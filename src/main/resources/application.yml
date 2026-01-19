@@ -1,0 +1,20 @@
+spring:
+    application:
+        name: fraud-detection-system
+    kafka:
+        bootstrap-servers: localhost:9092
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: com.vishavbangotra.fraud_detection_system.serdes.TransactionSerializer
+            acks: all
+        streams:
+            application-id: "fraud-detection-streams"
+            properties:
+                default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                default.value.serde: com.vishavbangotra.fraud_detection_system.serdes.TransactionSerde
+
+    springdoc:
+        swagger-ui:
+            enabled: true
+        api-docs:
+            enabled: true

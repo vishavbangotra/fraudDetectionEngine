@@ -8,19 +8,22 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaConfig {
 
+    public static final String TRANSACTIONS_RAW = "transactions.raw";
+    public static final String TRANSACTIONS_SCORED = "transactions.scored";
+    public static final String TRANSACTIONS_FLAGGED = "transactions.flagged";
+
     @Bean
-    public NewTopic fraudDetectionTopic() {
-        return TopicBuilder.name("transactions")
-                .partitions(3)
-                .replicas(1)
-                .build();
+    public NewTopic transactionsRawTopic() {
+        return TopicBuilder.name(TRANSACTIONS_RAW).partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic suspiciousTransactionTopic() {
-        return TopicBuilder.name("suspicious-transactions")
-                .partitions(3)
-                .replicas(1)
-                .build();
+    public NewTopic transactionsScoredTopic() {
+        return TopicBuilder.name(TRANSACTIONS_SCORED).partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic transactionsFlaggedTopic() {
+        return TopicBuilder.name(TRANSACTIONS_FLAGGED).partitions(3).replicas(1).build();
     }
 }

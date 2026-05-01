@@ -1,0 +1,3 @@
+### Simulate Transactions
+POST http://localhost:8080/api/transactions/simulate?count=50
+Content-Type: application/json

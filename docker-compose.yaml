@@ -23,6 +23,16 @@ services:
     ports:
       - "6379:6379"
 
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: fraud
+      POSTGRES_USER: fraud
+      POSTGRES_PASSWORD: fraud
+
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest

@@ -12,9 +12,35 @@ spring:
             properties:
                 default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
                 default.value.serde: com.vishavbangotra.fraud_detection_system.serdes.TransactionSerde
+    datasource:
+        url: jdbc:postgresql://localhost:5432/fraud
+        username: fraud
+        password: fraud
+    jpa:
+        hibernate:
+            ddl-auto: update
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+    data:
+        redis:
+            host: localhost
+            port: 6379
 
-    springdoc:
-        swagger-ui:
-            enabled: true
-        api-docs:
-            enabled: true
+springdoc:
+    swagger-ui:
+        enabled: true
+    api-docs:
+        enabled: true
+
+fraud:
+    rules:
+        amount:
+            threshold: 10000
+        velocity:
+            max: 5
+            window-seconds: 60
+
+alerts:
+    webhook:
+        url: ${ALERT_WEBHOOK_URL:}

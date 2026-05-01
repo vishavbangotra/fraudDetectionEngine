@@ -7,6 +7,7 @@ import com.vishavbangotra.fraud_detection_system.config.KafkaConfig;
 import com.vishavbangotra.fraud_detection_system.persistence.TransactionEventEntity;
 import com.vishavbangotra.fraud_detection_system.persistence.TransactionEventRepository;
 import com.vishavbangotra.fraud_detection_system.scoring.ScoredTransaction;
+import com.vishavbangotra.fraud_detection_system.streaming.LiveFeedService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,9 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 public class AuditConsumer {
 
     private final TransactionEventRepository repository;
+    private final LiveFeedService liveFeedService;
 
-    public AuditConsumer(TransactionEventRepository repository) {
+    public AuditConsumer(TransactionEventRepository repository, LiveFeedService liveFeedService) {
         this.repository = repository;
+        this.liveFeedService = liveFeedService;
     }
 
     @KafkaListener(
@@ -30,5 +33,6 @@ public class AuditConsumer {
             return;
         }
         repository.save(TransactionEventEntity.fromScored(scored));
+        liveFeedService.broadcastScored(scored);
     }
 }

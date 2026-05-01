@@ -8,6 +8,7 @@ import com.vishavbangotra.fraud_detection_system.config.KafkaConfig;
 import com.vishavbangotra.fraud_detection_system.persistence.FlaggedTransactionEntity;
 import com.vishavbangotra.fraud_detection_system.persistence.FlaggedTransactionRepository;
 import com.vishavbangotra.fraud_detection_system.scoring.ScoredTransaction;
+import com.vishavbangotra.fraud_detection_system.streaming.LiveFeedService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,10 +18,14 @@ public class FlaggedConsumer {
 
     private final FlaggedTransactionRepository repository;
     private final WebhookAlertService alertService;
+    private final LiveFeedService liveFeedService;
 
-    public FlaggedConsumer(FlaggedTransactionRepository repository, WebhookAlertService alertService) {
+    public FlaggedConsumer(FlaggedTransactionRepository repository,
+                           WebhookAlertService alertService,
+                           LiveFeedService liveFeedService) {
         this.repository = repository;
         this.alertService = alertService;
+        this.liveFeedService = liveFeedService;
     }
 
     @KafkaListener(
@@ -34,5 +39,6 @@ public class FlaggedConsumer {
         }
         repository.save(FlaggedTransactionEntity.fromScored(scored));
         alertService.send(scored);
+        liveFeedService.broadcastFlagged(scored);
     }
 }

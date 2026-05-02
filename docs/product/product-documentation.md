@@ -12,7 +12,7 @@ A typical payment system has dozens of fraud signals (high-value transactions, r
 
 - **HTTP ingestion** of single transaction events (`POST /api/transactions`).
 - **Synthetic load generator** for local testing (`POST /api/transactions/simulate?count=N`).
-- **Rules engine** with four shipped rules (Amount, Velocity, Geo, NewDevice), each independently weighted; new rules drop in as a `@Component implements Rule`.
+- **Rules engine** with four built-in rules (Amount, Velocity, Geo, NewDevice) plus an optional ML-backed rule, each independently weighted; new rules drop in as a `@Component implements Rule`.
 - **Risk classification** into `LOW` / `MEDIUM` / `HIGH` from a 0–100 score.
 - **Audit stream** — every scored event is persisted to `transaction_events`, regardless of risk.
 - **Flagged stream** — HIGH-risk events are persisted to `flagged_transactions` and POSTed to a configurable webhook.
@@ -26,12 +26,13 @@ A typical payment system has dozens of fraud signals (high-value transactions, r
 | `VELOCITY` | 25 | More than `fraud.rules.velocity.max` (default 5) txns from the same customer in the last `fraud.rules.velocity.window-seconds` (default 60) |
 | `GEO_MISMATCH` | 25 | Same customer, different country, less than 1 hour since the last transaction |
 | `NEW_DEVICE` | 10 | `deviceId` not seen for this customer in the last 90 days |
+| `ML_SCORING` | 35 | Optional; Python Isolation Forest sidecar returns `riskScore >= fraud.rules.ml.threshold` (default 0.75) |
 
 A score ≥ 70 is HIGH and triggers an alert. The rule weights and risk-band thresholds are deliberately tunable in code and configuration; see [data-models.md](../architecture/data-models.md) and [low-level-architecture.md](../architecture/low-level-architecture.md).
 
 ## What it is not (yet)
 
-- **Not an ML model.** Rules only. ML scoring is on the roadmap.
+- **Not a production-trained ML system.** The sidecar ships a deterministic demo Isolation Forest scorer; production training and calibration remain out of scope.
 - **Not a dashboard.** Persisted data is queried by direct SQL today; visualization is on the roadmap.
 - **Not multi-tenant.** Single customer namespace; no tenant isolation.
 - **Not auth'd.** All endpoints, including the destructive `DELETE /reset`, are open. Local-dev only at present.
@@ -41,7 +42,7 @@ A score ≥ 70 is HIGH and triggers an alert. The rule weights and risk-band thr
 
 1. Caller POSTs a `Transaction` JSON.
 2. Controller validates and produces to `transactions.raw` (Kafka), keyed by `customerId`.
-3. Kafka Streams reads it, runs all rules, and emits a `ScoredTransaction` to `transactions.scored`.
+3. Kafka Streams reads it, runs all enabled rules, optionally calls the ML sidecar, and emits a `ScoredTransaction` to `transactions.scored`.
 4. If `riskLevel == HIGH`, also emits to `transactions.flagged`.
 5. `AuditConsumer` writes every scored event to Postgres (`transaction_events`).
 6. `FlaggedConsumer` writes HIGH events to `flagged_transactions` and POSTs the event to the configured webhook.
@@ -50,6 +51,6 @@ End-to-end latency at idle Kafka load is sub-second on a developer laptop.
 
 ## Operational model
 
-- **Deployment:** local Docker Compose for the broker, Redis, Postgres, and Kafka UI; the Spring Boot app runs on the host (`./mvnw spring-boot:run`).
+- **Deployment:** local Docker Compose for the broker, Redis, Postgres, optional ML sidecar, and Kafka UI; the Spring Boot app runs on the host (`./mvnw spring-boot:run`).
 - **Observability:** Spring Boot Actuator endpoints under `/actuator/*`; structured logs via Lombok `@Slf4j`. No metrics export yet — see roadmap.
 - **Tuning:** rule weights and thresholds in `application.yml` under `fraud.rules.*`; webhook URL via `ALERT_WEBHOOK_URL` env or `alerts.webhook.url`.

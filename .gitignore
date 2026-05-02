@@ -33,3 +33,10 @@ build/
 ### VS Code ###
 .vscode/
 /.run
+
+### Python ###
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+ml-sidecar/.venv/

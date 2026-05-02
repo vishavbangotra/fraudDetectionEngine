@@ -21,8 +21,8 @@ A real-time fraud detection pipeline that ingests payment transactions over HTTP
            ┌───────────▼────────────┐         ┌──────────┐
            │ FraudDetectionStream   │ ◄─────► │  Redis   │
            │ (Kafka Streams)        │  rules  │ (state)  │
-           │   ↳ RuleEngine.score() │         └──────────┘
-           └──────┬─────────┬───────┘
+           │   ↳ RuleEngine.score() │ ◄─────► │ ML sidecar│
+           └──────┬─────────┬───────┘         └───────────┘
                   │         │
                   ▼         ▼ (filter riskLevel == HIGH)
        ┌────────────────┐  ┌─────────────────────┐
@@ -51,6 +51,7 @@ A real-time fraud detection pipeline that ingests payment transactions over HTTP
 | `FraudDetectionStream` | Kafka Streams topology: raw → scored → flagged | [streams/FraudDetectionStream.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/streams/FraudDetectionStream.java) |
 | `RuleEngine` | Aggregates rule outputs into a `ScoredTransaction` | [scoring/RuleEngine.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/scoring/RuleEngine.java) |
 | Rules | Independent scoring units, each `@Component implements Rule` | [scoring/rules/](../../src/main/java/com/vishavbangotra/fraud_detection_system/scoring/rules/) |
+| ML sidecar | Optional FastAPI Isolation Forest scorer used by `ML_SCORING` | [ml-sidecar/](../../ml-sidecar/) |
 | `AuditConsumer` | Persists every scored event | [consumers/AuditConsumer.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/consumers/AuditConsumer.java) |
 | `FlaggedConsumer` | Persists HIGH-risk events + fires alert | [consumers/FlaggedConsumer.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/consumers/FlaggedConsumer.java) |
 | `WebhookAlertService` | POSTs `ScoredTransaction` JSON, 3 retries × 500 ms | [alerting/WebhookAlertService.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/alerting/WebhookAlertService.java) |
@@ -63,6 +64,7 @@ A real-time fraud detection pipeline that ingests payment transactions over HTTP
 | Framework | Spring Boot | 3.5.9 |
 | Stream processing | Apache Kafka Streams | (Spring Boot managed) |
 | Cache / state | Redis | latest (Lettuce client) |
+| ML sidecar | Python + FastAPI + scikit-learn | Docker image built from `ml-sidecar/` |
 | Database | PostgreSQL | 16 |
 | API docs | springdoc-openapi | 2.0.2 |
 | Build | Maven (wrapper) | — |
@@ -72,13 +74,13 @@ A real-time fraud detection pipeline that ingests payment transactions over HTTP
 
 1. Caller sends `POST /api/transactions` with a JSON `Transaction`.
 2. Controller validates (Jakarta validation) and produces to `transactions.raw` keyed by `customerId` — co-locating per-customer state on one partition for the Redis-backed rules.
-3. `FraudDetectionStream` reads `transactions.raw`, calls `RuleEngine.score(txn)`, and produces a `ScoredTransaction` to `transactions.scored`.
+3. `FraudDetectionStream` reads `transactions.raw`, calls `RuleEngine.score(txn)`, optionally delegates to the ML sidecar through `ML_SCORING`, and produces a `ScoredTransaction` to `transactions.scored`.
 4. The same stream branches: any `ScoredTransaction` with `riskLevel == HIGH` is also produced to `transactions.flagged`.
 5. `AuditConsumer` (group `audit-writer`) reads `transactions.scored` → row in `transaction_events`.
 6. `FlaggedConsumer` (group `flagged-writer`) reads `transactions.flagged` → row in `flagged_transactions` → `WebhookAlertService.send(...)`.
 
 ## Scope
 
-**In scope (current MVP):** ingestion, rules engine (4 rules), audit + flagged persistence, webhook alerts.
+**In scope (current MVP):** ingestion, rules engine (4 built-in rules + optional ML rule), audit + flagged persistence, webhook alerts.
 
-**Out of scope (deliberate):** ML scoring (Isolation Forest / logistic regression), Prometheus + Grafana wiring, email alerts, SMS alerts, time-series store, web dashboard.
+**Out of scope (deliberate):** production ML training/calibration, Prometheus + Grafana wiring, email alerts, SMS alerts, time-series store, web dashboard.

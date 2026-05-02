@@ -95,7 +95,7 @@
         </svg>
       </div>
       <div class="title">Score</div>
-      <div class="tech">Streams + Redis · 4 rules</div>
+      <div class="tech">Rules + optional ML</div>
       <div class="metric"><span class="num">{c.total}</span><span class="unit">scored</span></div>
     </div>
 

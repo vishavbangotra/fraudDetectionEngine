@@ -8,9 +8,12 @@ Format loosely based on [Keep a Changelog](https://keepachangelog.com/). Version
 
 ### Added
 - `DELETE /api/transactions/reset` endpoint that clears Postgres tables, Redis (`FLUSHDB`), and truncates the three Kafka topics via `AdminClient.deleteRecords`. Local-dev only — see [decisions.md ADR-011](architecture/decisions.md).
+- Optional `ML_SCORING` rule that calls a Python FastAPI Isolation Forest sidecar, fails open on sidecar errors, and contributes a configurable score weight when enabled.
+- `ml-sidecar/` Docker service and pytest coverage for sidecar health/scoring behavior.
 
 ### Documentation
 - New `docs/` tree: architecture, product, api, dev, changelog.
+- Updated ADR-012 and setup/testing docs for sidecar-backed ML scoring.
 
 ---
 

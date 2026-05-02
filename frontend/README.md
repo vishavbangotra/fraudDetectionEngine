@@ -20,6 +20,14 @@ Components live under `src/lib/components/`. Stream wiring (EventSource → Svel
 
 ## Run
 
+From the repo root, the simplest path is:
+
+```bash
+make dev
+```
+
+Frontend-only:
+
 ```bash
 cd frontend
 npm install

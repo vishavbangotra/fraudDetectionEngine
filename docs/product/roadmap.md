@@ -6,12 +6,13 @@ Items are grouped by horizon. Each entry: what, why, and rough size. Dates are d
 
 - ✅ HTTP ingest with validation (`POST /api/transactions`)
 - ✅ Synthetic load generator (`POST /api/transactions/simulate`)
-- ✅ Rules engine + 4 rules (Amount, Velocity, Geo, NewDevice)
+- ✅ Rules engine + 4 built-in rules (Amount, Velocity, Geo, NewDevice)
+- ✅ Optional ML scoring rule backed by a Python Isolation Forest sidecar
 - ✅ Kafka Streams scoring topology emitting `transactions.scored` + `transactions.flagged`
 - ✅ Postgres persistence (audit + flagged tables)
 - ✅ Webhook alerting with retry + blank-URL no-op
 - ✅ Dev reset endpoint (`DELETE /api/transactions/reset`)
-- ✅ 19 unit + topology tests
+- ✅ Java unit/topology tests + Python sidecar tests
 
 ## Next (clear, sized, near-term)
 
@@ -28,7 +29,6 @@ Items are grouped by horizon. Each entry: what, why, and rough size. Dates are d
 
 | Item | Why | Size |
 |---|---|---|
-| **ML scoring as an additional `Rule`** | Logistic regression or Isolation Forest behind an HTTP call to a sidecar Python service. Plugs into the existing engine cleanly. See ADR-012. | L |
 | **Email + Slack alert sinks** | Pluggable `AlertSink` interface; webhook becomes one of many. | M |
 | **Per-merchant rules / categories** | Today's Transaction has `merchantId` but no merchant-aware rules. | M |
 | **Time-series rollup for dashboarding** | Current SQL queries are fine for triage; aggregate metrics need a TSDB or materialized view. | M |
@@ -45,5 +45,5 @@ Items are grouped by horizon. Each entry: what, why, and rough size. Dates are d
 ## Won't do (intentional non-goals for now)
 
 - A bundled web UI for triage. The webhook payload is rich enough; users wire it into existing tools.
-- Embedded ML training. Scoring only — training stays out of band.
+- Production ML training. The sidecar ships a deterministic demo scorer; real model training stays out of band.
 - A custom DSL for rules. Java rules are explicit, testable, and don't need a parser.

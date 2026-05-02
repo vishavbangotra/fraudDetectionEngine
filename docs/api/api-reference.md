@@ -147,6 +147,42 @@ Both are enabled in `application.yml` under `springdoc.*`.
 
 ---
 
+## ML sidecar API
+
+Local base URL when running `docker compose --profile ml up -d ml-sidecar`: `http://localhost:8090`.
+
+### `GET /health`
+
+Returns sidecar readiness and the loaded model identity:
+
+```json
+{
+  "status": "ok",
+  "model": "isolation_forest",
+  "modelVersion": "iforest-demo-v1"
+}
+```
+
+### `POST /score`
+
+Used by `MlScoringRule` when `fraud.rules.ml.enabled=true`. The request body is the same `Transaction` JSON shape accepted by `POST /api/transactions`.
+
+Response:
+
+```json
+{
+  "model": "isolation_forest",
+  "modelVersion": "iforest-demo-v1",
+  "riskScore": 0.82,
+  "anomaly": true,
+  "reasonCodes": ["high_amount", "off_hours"]
+}
+```
+
+The Java rule fires when `riskScore >= fraud.rules.ml.threshold`; sidecar errors fail open and do not block normal scoring.
+
+---
+
 ## Asynchronous outputs (not HTTP, but part of the API surface)
 
 | Topic | Format | Consumers expected |

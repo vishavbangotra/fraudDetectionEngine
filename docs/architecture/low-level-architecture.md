@@ -18,12 +18,16 @@ Root: `com.vishavbangotra.fraud_detection_system`
 │   ├── RiskLevel                         (LOW / MEDIUM / HIGH + fromScore)
 │   ├── ScoredTransaction                 (DTO emitted to .scored / .flagged)
 │   ├── RuleEngine                        (aggregates all Rule beans)
+│   ├── ml/
+│   │   ├── MlScoringClient               (RestClient wrapper for sidecar calls)
+│   │   └── MlScoreResponse               (sidecar response DTO)
 │   └── rules/
 │       ├── Rule                          (interface: name(), weight(), evaluate())
 │       ├── AmountThresholdRule           (weight 40, stateless)
 │       ├── VelocityRule                  (weight 25, Redis ZSET)
 │       ├── GeoMismatchRule               (weight 25, Redis HASH)
-│       └── NewDeviceRule                 (weight 10, Redis SET)
+│       ├── NewDeviceRule                 (weight 10, Redis SET)
+│       └── MlScoringRule                 (optional, sidecar-backed)
 ├── serdes/
 │   ├── JsonMapper                        (shared ObjectMapper w/ JavaTimeModule)
 │   ├── TransactionSerde / Serializer / Deserializer
@@ -95,6 +99,22 @@ GeoMismatchRule fires when stored country differs from current AND elapsed time 
 
 NewDeviceRule fires when the deviceId is not already a set member; SADD always runs after the check.
 
+## ML Sidecar Rule
+
+`MlScoringRule` is only registered when `fraud.rules.ml.enabled=true`. It calls `POST fraud.rules.ml.url` with the existing `Transaction` JSON and expects:
+
+```json
+{
+  "model": "isolation_forest",
+  "modelVersion": "iforest-demo-v1",
+  "riskScore": 0.82,
+  "anomaly": true,
+  "reasonCodes": ["high_amount"]
+}
+```
+
+The rule fires when `riskScore >= fraud.rules.ml.threshold` and contributes `fraud.rules.ml.weight` points. Timeouts, 4xx/5xx responses, invalid `riskScore`, and other client exceptions are logged and treated as `false` so scoring continues with the other rules.
+
 ## Kafka Wiring
 
 Topic name constants live in [`KafkaConfig`](../../src/main/java/com/vishavbangotra/fraud_detection_system/config/KafkaConfig.java):
@@ -149,4 +169,10 @@ This is intended for local dev and test runs only — see `decisions.md` for the
 | `fraud.rules.amount.threshold` | `10000` | AmountThresholdRule cutoff |
 | `fraud.rules.velocity.max` | `5` | Max txns per window |
 | `fraud.rules.velocity.window-seconds` | `60` | Velocity window |
+| `fraud.rules.ml.enabled` | `false` | Registers `ML_SCORING` rule when true |
+| `fraud.rules.ml.url` | `http://localhost:8090/score` | Sidecar scoring endpoint |
+| `fraud.rules.ml.threshold` | `0.75` | Minimum risk score for the rule to fire |
+| `fraud.rules.ml.weight` | `35` | Points added when ML rule fires |
+| `fraud.rules.ml.connect-timeout-ms` | `250` | Sidecar connection timeout |
+| `fraud.rules.ml.read-timeout-ms` | `500` | Sidecar response timeout |
 | `alerts.webhook.url` | `${ALERT_WEBHOOK_URL:}` (blank disables) | Webhook target |

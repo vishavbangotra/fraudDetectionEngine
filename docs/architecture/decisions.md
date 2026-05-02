@@ -136,12 +136,12 @@ A lightweight ADR log of choices made during the MVP build. Each entry: context,
 
 ---
 
-## ADR-012: No ML in the MVP
+## ADR-012: ML scoring runs as an optional sidecar-backed rule
 
-**Context.** Original architecture included Isolation Forest / logistic regression scoring.
+**Context.** The rules engine can already accept any Spring bean implementing `Rule`. The next fraud signal is model-based scoring, but the Java service should not grow Python ML dependencies or block the stream when the model is unavailable.
 
-**Decision.** Defer.
+**Decision.** Add `ML_SCORING` as an optional `Rule` bean. The Java rule calls a Python FastAPI sidecar over HTTP. The sidecar ships a deterministic demo Isolation Forest model and returns a normalized `riskScore`; the Java rule fires when that score is at or above `fraud.rules.ml.threshold`. The rule is disabled by default and fails open on timeout, invalid response, or sidecar error.
 
-**Why.** A clean rules engine has demonstrable value, is testable, and forms the contract that an ML score would later plug into (just another `Rule` implementation). Building both at once muddies the design.
+**Why.** This keeps the existing `RuleEngine` contract unchanged, keeps Python/scikit-learn isolated from the Spring Boot runtime, and makes the feature easy to disable locally or during outages. Isolation Forest is the right demo model because the repo has no labeled fraud outcomes for logistic regression.
 
-**Tradeoffs.** The system can't catch novel patterns the rules don't cover. Roadmap item.
+**Tradeoffs.** HTTP scoring adds latency and another runtime dependency when enabled. Failing open protects Kafka Streams throughput but can miss ML-only fraud during sidecar outages. The bundled model is not production-calibrated; real training, model registry, and drift monitoring remain future work.

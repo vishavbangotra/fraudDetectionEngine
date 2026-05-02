@@ -50,7 +50,7 @@ The system has both human users (operators, engineers) and machine users (upstre
 **Touchpoints.**
 - The `Rule` interface ([scoring/rules/Rule.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/scoring/rules/Rule.java)) — three methods: `name()`, `weight()`, `evaluate()`.
 - `application.yml` under `fraud.rules.*` for tunables.
-- Reference implementations: `AmountThresholdRule` (stateless), `VelocityRule` (Redis ZSET), `GeoMismatchRule` (Redis HASH), `NewDeviceRule` (Redis SET).
+- Reference implementations: `AmountThresholdRule` (stateless), `VelocityRule` (Redis ZSET), `GeoMismatchRule` (Redis HASH), `NewDeviceRule` (Redis SET), `MlScoringRule` (HTTP sidecar).
 
 **Pain points addressed.** `RuleEngine` swallows rule exceptions and logs them — one bad rule never breaks scoring for others.
 
@@ -67,7 +67,7 @@ The system has both human users (operators, engineers) and machine users (upstre
 - Eventually: dashboards, alerts, on-call rotation.
 
 **Touchpoints.**
-- [docker-compose.yaml](../../docker-compose.yaml) for the broker, Redis, Postgres, Kafka UI.
+- [docker-compose.yaml](../../docker-compose.yaml) for the broker, Redis, Postgres, Kafka UI, and optional ML sidecar.
 - Spring Boot Actuator endpoints (`/actuator/health`, `/actuator/info`).
 - Kafka UI at http://localhost:8085.
 - `DELETE /api/transactions/reset` for local resets.

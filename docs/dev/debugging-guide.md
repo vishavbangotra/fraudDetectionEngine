@@ -8,7 +8,8 @@ A symptom → likely cause → fix lookup. Augments [dev-setup.md](dev-setup.md)
 2. **App logs** — `./mvnw spring-boot:run` foreground. Look for `Fraud HIGH` warns from the topology, `RuleEngine` initialization line, and `Webhook alert sent` / `Webhook attempt N/3 failed`.
 3. **Postgres** — `psql -h localhost -U fraud -d fraud`. Tables: `transaction_events`, `flagged_transactions`.
 4. **Redis** — `redis-cli`. Keys: `velocity:*`, `geo:*`, `devices:*`. `KEYS *` is fine in dev but never in prod.
-5. **Actuator** — `GET /actuator/health` for the composite, including Kafka, Redis, and DB indicators.
+5. **ML sidecar** — `GET http://localhost:8090/health` when `fraud.rules.ml.enabled=true`.
+6. **Actuator** — `GET /actuator/health` for the composite, including Kafka, Redis, and DB indicators.
 
 ## Decision tree by symptom
 
@@ -88,6 +89,16 @@ If the URL is set but no alert arrives:
 - Is the event actually HIGH? Check `transaction_events.risk_level`.
 - App logs show `Webhook attempt N/3 failed`? The endpoint is unreachable or returning 4xx/5xx. The service swallows after 3 attempts (ADR-006); the alert is lost — check the receiver.
 - App logs show `Webhook URL not configured`? The blank-URL no-op fired.
+
+### "`ML_SCORING` never appears in `triggeredRules`"
+
+Confirm the rule is enabled and the sidecar is reachable:
+
+```bash
+curl http://localhost:8090/health
+```
+
+The Spring app must be started with `--fraud.rules.ml.enabled=true`; otherwise `MlScoringRule` is not registered. If logs show `ML sidecar scoring failed`, the rule fails open and scoring continues with the non-ML rules. If the sidecar responds but the rule still does not fire, lower `fraud.rules.ml.threshold` temporarily or post a high-amount, off-hours transaction.
 
 ### "Streams app keeps restarting"
 

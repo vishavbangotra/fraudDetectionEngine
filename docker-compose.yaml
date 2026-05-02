@@ -33,6 +33,15 @@ services:
       POSTGRES_USER: fraud
       POSTGRES_PASSWORD: fraud
 
+  ml-sidecar:
+    container_name: ml-sidecar
+    profiles:
+      - ml
+    build:
+      context: ./ml-sidecar
+    ports:
+      - "8090:8090"
+
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest

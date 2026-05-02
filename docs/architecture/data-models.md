@@ -60,6 +60,18 @@ Lombok: `@Data`, `@Builder`, `@AllArgsConstructor`, `@NoArgsConstructor`.
 }
 ```
 
+## ML Sidecar ScoreResponse
+
+Returned by `POST /score` on the optional Python sidecar. This is not persisted directly; `MlScoringRule` uses `riskScore` to decide whether to add `ML_SCORING` to `triggeredRules`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `model` | `String` | `isolation_forest` for the bundled demo scorer |
+| `modelVersion` | `String` | Stable sidecar model identifier, e.g. `iforest-demo-v1` |
+| `riskScore` | `double` | Normalized 0.0–1.0 anomaly risk |
+| `anomaly` | `boolean` | Sidecar-local threshold result; Java still applies `fraud.rules.ml.threshold` |
+| `reasonCodes` | `List<String>` | Coarse explanations such as `high_amount`, `off_hours`, `location_missing` |
+
 ## RiskLevel
 
 Enum at [scoring/RiskLevel.java](../../src/main/java/com/vishavbangotra/fraud_detection_system/scoring/RiskLevel.java).
@@ -107,6 +119,8 @@ Same shape as `transaction_events` but persisted only for HIGH-risk events. Inde
 | `devices:{customerId}` | Set | Known deviceIds; powers NewDeviceRule |
 
 See [low-level-architecture.md](low-level-architecture.md) for TTLs and trigger semantics.
+
+The ML sidecar is stateless at request time; it keeps the demo Isolation Forest model in process memory and does not add Redis keys or database tables.
 
 ## Kafka Topic Schemas
 

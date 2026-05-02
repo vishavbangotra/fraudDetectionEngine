@@ -40,6 +40,13 @@ fraud:
         velocity:
             max: 5
             window-seconds: 60
+        ml:
+            enabled: false
+            url: http://localhost:8090/score
+            threshold: 0.75
+            weight: 35
+            connect-timeout-ms: 250
+            read-timeout-ms: 500
 
 alerts:
     webhook:
